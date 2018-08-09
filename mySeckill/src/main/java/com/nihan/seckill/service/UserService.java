@@ -15,7 +15,6 @@ public class UserService {
 	public User getById(int id) {
 		 return userDao.getById(id);
 	}
-
 	@Transactional
 	public boolean tx() {
 		User u1= new User();
@@ -27,7 +26,6 @@ public class UserService {
 		u2.setId(1);
 		u2.setName("11111");
 		userDao.insert(u2);
-		
 		return true;
 	}
 	
