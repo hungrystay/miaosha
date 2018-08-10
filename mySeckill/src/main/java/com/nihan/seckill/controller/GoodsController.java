@@ -1,6 +1,7 @@
 package com.nihan.seckill.controller;
 
 import com.nihan.seckill.domain.MiaoshaUser;
+import com.nihan.seckill.redis.GoodsKey;
 import com.nihan.seckill.redis.RedisService;
 import com.nihan.seckill.service.GoodsService;
 import com.nihan.seckill.service.MiaoshaUserService;
@@ -12,10 +13,13 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import org.apache.commons.lang3.StringUtils;
+import org.thymeleaf.context.WebContext;
+import org.thymeleaf.spring5.view.ThymeleafViewResolver;
+
 import java.util.List;
 
 @Controller
@@ -32,10 +36,11 @@ public class GoodsController {
 	GoodsService goodsService;
 
 	@Autowired
-    ApplicationContext applicationContext;
+	ThymeleafViewResolver viewResolver;
 
-	@RequestMapping(value="/to_list")
-	public String list(Session session, HttpServletResponse response, Model model,
+	@RequestMapping(value="/to_list" ,produces="text/html")
+	@ResponseBody
+	public String list(Session session,HttpServletRequest request, HttpServletResponse response, Model model,
 					   @CookieValue(value=MiaoshaUserService.COOKI_NAME_TOKEN, required = false) String cookieToken,
 					   @RequestParam(value=MiaoshaUserService.COOKI_NAME_TOKEN, required= false) String paramToken) {
 		Session.Cookie cookie = session.getCookie();
@@ -49,6 +54,11 @@ public class GoodsController {
 			return "login";
 		}
 
+		String html = redisService.get(GoodsKey.getGoodsList, ""+"goods_list", String.class);
+		if(!StringUtils.isEmpty(html)) {
+			return html;
+		}
+
 		String token = StringUtils.isEmpty(paramToken)?cookieToken:paramToken;
 		MiaoshaUser user = userService.getByToken(response, token);
 		System.out.println("user============" + user);
@@ -56,19 +66,35 @@ public class GoodsController {
 		List<GoodsVo> goodsList = goodsService.listGoodsVo();
 		model.addAttribute("goodsList", goodsList);
 		model.addAttribute("user", user);
-		return "goods_list";
+//		return "goods_list";
+
+		WebContext ctx = new WebContext(request,response,
+				request.getServletContext(),request.getLocale(), model.asMap());
+		html = viewResolver.getTemplateEngine().process("goods_list", ctx);
+		if(!StringUtils.isEmpty(html)) {
+			redisService.set(GoodsKey.getGoodsDetail, ""+"goods_list", html);
+		}
+
+		return html;
 	}
 
-	@RequestMapping(value="/to_detail/{goodsId}")
-	public String detail(HttpServletResponse response, Model model,
-                         @CookieValue(value=MiaoshaUserService.COOKI_NAME_TOKEN, required = false) String cookieToken,
-                         @RequestParam(value=MiaoshaUserService.COOKI_NAME_TOKEN, required= false) String paramToken,
-                         @PathVariable("goodsId")long goodsId) {
+	@RequestMapping(value="/to_detail/{goodsId}",produces="text/html")
+	@ResponseBody
+	public String detail(HttpServletRequest request, HttpServletResponse response, Model model,
+						 @CookieValue(value=MiaoshaUserService.COOKI_NAME_TOKEN, required = false) String cookieToken,
+						 @RequestParam(value=MiaoshaUserService.COOKI_NAME_TOKEN, required= false) String paramToken,
+						 @PathVariable("goodsId")long goodsId) {
 		System.out.println("cookieToken========" + cookieToken);
 		System.out.println("paramToken=========" + paramToken);
 		if(StringUtils.isEmpty(cookieToken)&&StringUtils.isEmpty(paramToken)){
 			return "login";
 		}
+
+		String html = redisService.get(GoodsKey.getGoodsDetail, ""+goodsId, String.class);
+    	if(!StringUtils.isEmpty(html)) {
+    		return html;
+    	}
+
 
 		String token = StringUtils.isEmpty(paramToken)?cookieToken:paramToken;
 		MiaoshaUser user = userService.getByToken(response, token);
@@ -96,6 +122,16 @@ public class GoodsController {
 		}
 		model.addAttribute("miaoshaStatus", miaoshaStatus);
 		model.addAttribute("remainSeconds", remainSeconds);
-		return "goods_detail";
+//		return "goods_detail";
+
+		WebContext ctx = new WebContext(request,response,
+    			request.getServletContext(),request.getLocale(), model.asMap());
+    	html = viewResolver.getTemplateEngine().process("goods_detail", ctx);
+    	if(!StringUtils.isEmpty(html)) {
+    		redisService.set(GoodsKey.getGoodsDetail, ""+goodsId, html);
+    	}
+
+    	return html;
+
 	}
 }

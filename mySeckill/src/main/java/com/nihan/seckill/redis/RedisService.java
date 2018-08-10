@@ -27,6 +27,8 @@ public class RedisService {
 			 //生成真正的key
 			 String realKey  = prefix.getPrefix() + key;
 			 String  str = jedis.get(realKey);
+			 System.out.println("realKey==============");
+			 System.out.println(realKey);
 			 T t =  stringToBean(str, clazz);
 			 return t;
 		 }finally {
