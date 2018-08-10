@@ -6,8 +6,8 @@ public class Goods {
 	private String goodsTitle;
 	private String goodsImg;
 	private String goodsDetail;
-	private Double goodsPrice;
-	private Integer goodsStock;
+	protected Double goodsPrice;
+	protected Integer goodsStock;
 	public Long getId() {
 		return id;
 	}
