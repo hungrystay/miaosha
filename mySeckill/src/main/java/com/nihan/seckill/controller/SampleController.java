@@ -1,5 +1,6 @@
 package com.nihan.seckill.controller;
 import com.nihan.seckill.domain.User;
+import com.nihan.seckill.rabbitmq.MQSender;
 import com.nihan.seckill.redis.RedisService;
 import com.nihan.seckill.redis.UserKey;
 import com.nihan.seckill.result.CodeMsg;
@@ -27,34 +28,34 @@ public class SampleController {
 	@Autowired
     RedisService redisService;
 
-//	@Autowired
-//	MQSender sender;
+	@Autowired
+    MQSender sender;
 
-//	@RequestMapping("/mq/header")
-//    @ResponseBody
-//    public Result<String> header() {
-//		sender.sendHeader("hello,imooc");
-//        return Result.success("Hello，world");
-//    }
+	@RequestMapping("/mq/header")
+    @ResponseBody
+    public Result<String> header() {
+		sender.sendHeader("hello,imooc");
+        return Result.success("Hello，world");
+    }
 //
-//	@RequestMapping("/mq/fanout")
-//    @ResponseBody
-//    public Result<String> fanout() {
-//		sender.sendFanout("hello,imooc");
-//        return Result.success("Hello，world");
-//    }
+	@RequestMapping("/mq/fanout")
+    @ResponseBody
+    public Result<String> fanout() {
+		sender.sendFanout("hello,imooc");
+        return Result.success("Hello，world");
+    }
 //
-//	@RequestMapping("/mq/topic")
-//    @ResponseBody
-//    public Result<String> topic() {
-//		sender.sendTopic("hello,imooc");
-//        return Result.success("Hello，world");
-//    }
+	@RequestMapping("/mq/topic")
+    @ResponseBody
+    public Result<String> topic() {
+		sender.sendTopic("hello,imooc");
+        return Result.success("Hello，world");
+    }
 //
 	@RequestMapping("/mq")
     @ResponseBody
     public Result<String> mq() {
-//		sender.send("hello,imooc");
+		sender.send("hello,imooc");
         return Result.success("Hello，world");
     }
 

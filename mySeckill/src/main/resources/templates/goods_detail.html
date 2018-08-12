@@ -45,10 +45,12 @@
         	<span th:if="${miaoshaStatus eq 2}">秒杀已结束</span>
         </td>
         <td>
-        	<form id="miaoshaForm" method="post" action="/miaosha/do_miaosha">
+        	<form id="miaoshaForm" method="post" action="/miaosha/do_miaosha1">
         		<button class="btn btn-primary btn-block" type="submit" id="buyButton">立即秒杀</button>
         		<input type="hidden" name="goodsId" th:value="${goods.id}" />
         	</form>
+            <!--<button class="btn btn-primary" type="button" id="buyButton"onclick="doMiaosha()">立即秒杀</button>-->
+            <!--<input type="hidden" name="goodsId" id = "goodsId" th:value="${goods.id}" />-->
         </td>
      </tr>
      <tr>  
@@ -67,31 +69,63 @@
 </div>
 </body>
 <script>
-$(function(){
-	countDown();
-});
 
-function countDown(){
-	var remainSeconds = $("#remainSeconds").val();
-	var timeout;
-	if(remainSeconds > 0){//秒杀还没开始，倒计时
-		$("#buyButton").attr("disabled", true);
-		timeout = setTimeout(function(){
-			$("#countDown").text(remainSeconds - 1);
-			$("#remainSeconds").val(remainSeconds - 1);
-			countDown();
-		},1000);
-	}else if(remainSeconds == 0){//秒杀进行中
-		$("#buyButton").attr("disabled", false);
-		if(timeout){
-			clearTimeout(timeout);
-		}
-		$("#miaoshaTip").html("秒杀进行中");
-	}else{//秒杀已经结束
-		$("#buyButton").attr("disabled", true);
-		$("#miaoshaTip").html("秒杀已经结束");
-	}
+function doMiaosha(){
+    $.ajax({
+        url:"/miaosha/do_miaosha",
+        type:"POST",
+        data:{
+            goodsId:$("#goodsId").val()
+        },
+        success:function(data){
+            if(data.code == 0){
+                window.location.href="/order_detail.html?orderId="+data.data.id;
+                // getMiaoshaResult($("#goodsId").val());
+            }else{
+                layer.msg(data.msg);
+            }
+        },
+        error:function(){
+            layer.msg("客户端请求有误");
+        }
+    });
 }
+
+// function getMiaoshaResult(goodsId){
+//     g_showLoading();
+//     $.ajax({
+//         url:"/miaosha/result",
+//         type:"GET",
+//         data:{
+//             goodsId:$("#goodsId").val(),
+//         },
+//         success:function(data){
+//             if(data.code == 0){
+//                 var result = data.data;
+//                 if(result < 0){
+//                     layer.msg("对不起，秒杀失败");
+//                 }else if(result == 0){//继续轮询
+//                     setTimeout(function(){
+//                         getMiaoshaResult(goodsId);
+//                     }, 200);
+//                 }else{
+//                     layer.confirm("恭喜你，秒杀成功！查看订单？", {btn:["确定","取消"]},
+//                         function(){
+//                             window.location.href="/order_detail.htm?orderId="+result;
+//                         },
+//                         function(){
+//                             layer.closeAll();
+//                         });
+//                 }
+//             }else{
+//                 layer.msg(data.msg);
+//             }
+//         },
+//         error:function(){
+//             layer.msg("客户端请求有误");
+//         }
+//     });
+// }
 
 </script>
 </html>

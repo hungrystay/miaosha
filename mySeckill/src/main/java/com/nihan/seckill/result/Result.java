@@ -12,7 +12,10 @@ public class Result<T> {
 	public static  <T> Result<T> success(T data){
 		return new Result<T>(data);
 	}
-	
+
+	public static <T> Result<T> success(T data, int code) {
+		return new Result<T> (data, code);
+	}
 	/**
 	 *  失败时候的调用
 	 * */
@@ -23,7 +26,11 @@ public class Result<T> {
 	private Result(T data) {
 		this.data = data;
 	}
-	
+
+	private Result(T data, int code ) {
+		this.data = data;
+		this.code = code;
+	}
 	private Result(int code, String msg) {
 		this.code = code;
 		this.msg = msg;

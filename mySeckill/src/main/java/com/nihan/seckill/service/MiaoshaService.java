@@ -46,4 +46,22 @@ public class MiaoshaService {
 	private void setGoodsOver(Long goodsId) {
 		redisService.set(MiaoshaKey.isGoodsOver, ""+goodsId, true);
 	}
+
+	public long getMiaoshaResult(Long userId, long goodsId) {
+		MiaoshaOrder order = orderService.getMiaoshaOrderByUserIdGoodsId(userId, goodsId);
+		if(order != null) {//秒杀成功
+			return order.getOrderId();
+		}else {
+			boolean isOver = getGoodsOver(goodsId);
+			if(isOver) {
+				return -1;
+			}else {
+				return 0;
+			}
+		}
+	}
+
+	private boolean getGoodsOver(long goodsId) {
+		return redisService.exists(MiaoshaKey.isGoodsOver, ""+goodsId);
+	}
 }
