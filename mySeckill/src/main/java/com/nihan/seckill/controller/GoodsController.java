@@ -3,8 +3,11 @@ package com.nihan.seckill.controller;
 import com.nihan.seckill.domain.MiaoshaUser;
 import com.nihan.seckill.redis.GoodsKey;
 import com.nihan.seckill.redis.RedisService;
+import com.nihan.seckill.result.CodeMsg;
+import com.nihan.seckill.result.Result;
 import com.nihan.seckill.service.GoodsService;
 import com.nihan.seckill.service.MiaoshaUserService;
+import com.nihan.seckill.vo.GoodsDetailVo;
 import com.nihan.seckill.vo.GoodsVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.servlet.server.Session;
@@ -83,7 +86,7 @@ public class GoodsController {
 
 	@RequestMapping(value="/to_detail/{goodsId}",produces="text/html")
 	@ResponseBody
-	public String detail(HttpServletRequest request, HttpServletResponse response, Model model,
+	public String to_detail(HttpServletRequest request, HttpServletResponse response, Model model,
 						 @CookieValue(value=MiaoshaUserService.COOKI_NAME_TOKEN, required = false) String cookieToken,
 						 @RequestParam(value=MiaoshaUserService.COOKI_NAME_TOKEN, required= false) String paramToken,
 						 @PathVariable("goodsId")long goodsId) {
@@ -135,6 +138,48 @@ public class GoodsController {
     	}
 
     	return html;
+
+	}
+
+	@RequestMapping(value="/detail/{goodsId}")
+	@ResponseBody
+	public Result<GoodsDetailVo> detail(HttpServletRequest request, HttpServletResponse response, Model model,
+										@CookieValue(value=MiaoshaUserService.COOKI_NAME_TOKEN, required = false) String cookieToken,
+										@RequestParam(value=MiaoshaUserService.COOKI_NAME_TOKEN, required= false) String paramToken,
+										@PathVariable("goodsId")long goodsId) {
+		System.out.println("cookieToken========" + cookieToken);
+		System.out.println("paramToken=========" + paramToken);
+		if(StringUtils.isEmpty(cookieToken)&&StringUtils.isEmpty(paramToken)){
+//			return "login";
+			Result.error(CodeMsg.SESSION_ERROR);
+		}
+
+		String token = StringUtils.isEmpty(paramToken)?cookieToken:paramToken;
+		MiaoshaUser user = userService.getByToken(response, token);
+		System.out.println("user============" + user);
+		GoodsVo goods = goodsService.getGoodsVoByGoodsId(goodsId);
+		long startAt = goods.getStartDate().getTime();
+		long endAt = goods.getEndDate().getTime();
+		long now = System.currentTimeMillis();
+		int miaoshaStatus = 0;
+		int remainSeconds = 0;
+		if(now < startAt ) {//秒杀还没开始，倒计时
+			miaoshaStatus = 0;
+			remainSeconds = (int)((startAt - now )/1000);
+		}else  if(now > endAt){//秒杀已经结束
+			miaoshaStatus = 2;
+			remainSeconds = -1;
+		}else {//秒杀进行中
+			miaoshaStatus = 1;
+			remainSeconds = 0;
+		}
+		GoodsDetailVo vo = new GoodsDetailVo();
+		vo.setGoods(goods);
+		vo.setUser(user);
+		vo.setRemainSeconds(remainSeconds);
+		vo.setMiaoshaStatus(miaoshaStatus);
+		return Result.success(vo);
+
 
 	}
 }
