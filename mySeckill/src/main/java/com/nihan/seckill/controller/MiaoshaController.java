@@ -53,7 +53,6 @@ public class MiaoshaController implements InitializingBean {
 	public Result<String> home() {
 		return Result.success("Hello，world");
 	}
-
 	/**
 	 *  100
 	 *  QPS:  470
@@ -94,18 +93,16 @@ public class MiaoshaController implements InitializingBean {
 	 *
 	 *
 	 */
-
-	@RequestMapping(value = "/do_miaosha", method=RequestMethod.POST)
+	@RequestMapping(value="/do_miaosha", method=RequestMethod.POST)
 	@ResponseBody
-	public Result<Object> testMiaosha(HttpServletResponse response, Model model,
-										 @CookieValue(value=MiaoshaUserService.COOKI_NAME_TOKEN, required = false) String cookieToken,
-										 @RequestParam(value=MiaoshaUserService.COOKI_NAME_TOKEN, required= false) String paramToken,
-										 @RequestParam("goodsId")long goodsId) {
-
+	public Result<OrderInfo> miaosha( Model model, HttpServletResponse response,
+							   @CookieValue(value=MiaoshaUserService.COOKI_NAME_TOKEN, required = false) String cookieToken,
+							  @RequestParam(value=MiaoshaUserService.COOKI_NAME_TOKEN, required= false) String paramToken,
+                              @RequestParam("goodsId")long goodsId) {
 		System.out.println("cookieToken========" + cookieToken);
 		System.out.println("paramToken=========" + paramToken);
 		if(StringUtils.isEmpty(cookieToken)&&StringUtils.isEmpty(paramToken)){
-			return Result.error(CodeMsg.SESSION_ERROR);
+			Result.error(CodeMsg.SESSION_ERROR);
 		}
 
 
@@ -137,7 +134,6 @@ public class MiaoshaController implements InitializingBean {
 		model.addAttribute("goods", goods);
 		return Result.success(orderInfo, 0);
 	}
-
 
 	@RequestMapping("/do_miaosha1")
 	public String testMiaosha(Model model, HttpServletResponse response,
