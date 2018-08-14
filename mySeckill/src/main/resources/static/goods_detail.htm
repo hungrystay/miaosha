@@ -49,7 +49,8 @@
         		<!--<button class="btn btn-primary btn-block" type="submit" id="buyButton">立即秒杀</button>-->
         		<!--<input type="hidden" name="goodsId"  id="goodsId" />-->
         	<!--</form>-->
-            <button class="btn btn-primary btn-block" type="button" id="buyButton" onclick="doMiaosha()">立即秒杀</button>
+            <!--<button class="btn btn-primary btn-block" type="button" id="buyButton" onclick="doMiaosha()">立即秒杀</button>-->
+            <button class="btn btn-primary" type="button" id="buyButton"onclick="getMiaoshaPath()">立即秒杀</button>
         </td>
      </tr>
      <tr>
@@ -170,6 +171,53 @@ function getMiaoshaResult(goodsId){
     });
 }
 
+function getMiaoshaPath(){
+    // var goodsId = $("#goodsId").val();
+    var goodsId = g_getQueryString("goodsId");
+    g_showLoading();
+    $.ajax({
+        url:"/miaosha/path",
+        type:"GET",
+        data:{
+            goodsId:goodsId,
+            // verifyCode:$("#verifyCode").val()
+        },
+        success:function(data){
+            if(data.code == 0){
+                var path = data.data;
+                doMiaosha(path);
+            }else{
+                layer.msg(data.msg);
+            }
+        },
+        error:function(){
+            layer.msg("客户端请求有误");
+        }
+    });
+}
+
+function doMiaosha(path){
+    var goodsId = g_getQueryString("goodsId");
+    $.ajax({
+        url:"/miaosha/"+path+"/do_miaosha",
+        type:"POST",
+        data:{
+            goodsId:goodsId
+        },
+        success:function(data){
+            if(data.code == 0){
+                // window.location.href="/order_detail.htm?orderId="+data.data.id;
+                getMiaoshaResult(goodsId);
+            }else{
+                layer.msg(data.msg);
+            }
+        },
+        error:function(){
+            layer.msg("客户端请求有误");
+        }
+    });
+}
+
 function doMiaosha(){
     var goodsId = g_getQueryString("goodsId");
     $.ajax({
@@ -190,7 +238,6 @@ function doMiaosha(){
             layer.msg("客户端请求有误");
         }
     });
-
 }
 
 </script>

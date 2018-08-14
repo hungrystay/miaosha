@@ -1,10 +1,12 @@
 package com.nihan.seckill.controller;
 
+import com.nihan.seckill.access.AccessLimit;
 import com.nihan.seckill.domain.MiaoshaOrder;
 import com.nihan.seckill.domain.MiaoshaUser;
 import com.nihan.seckill.domain.OrderInfo;
 import com.nihan.seckill.rabbitmq.MQSender;
 import com.nihan.seckill.rabbitmq.MiaoshaMessage;
+import com.nihan.seckill.redis.AccessKey;
 import com.nihan.seckill.redis.GoodsKey;
 import com.nihan.seckill.redis.RedisService;
 import com.nihan.seckill.result.CodeMsg;
@@ -20,6 +22,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.HashMap;
 import java.util.List;
@@ -95,7 +99,7 @@ public class MiaoshaController implements InitializingBean {
 	 */
 	@RequestMapping(value="/do_miaosha", method=RequestMethod.POST)
 	@ResponseBody
-	public Result<OrderInfo> miaosha( Model model, HttpServletResponse response,
+	public Result<OrderInfo> miaosha(HttpServletResponse response,
 							   @CookieValue(value=MiaoshaUserService.COOKI_NAME_TOKEN, required = false) String cookieToken,
 							  @RequestParam(value=MiaoshaUserService.COOKI_NAME_TOKEN, required= false) String paramToken,
                               @RequestParam("goodsId")long goodsId) {
@@ -112,13 +116,13 @@ public class MiaoshaController implements InitializingBean {
 		GoodsVo goods = goodsService.getGoodsVoByGoodsId(goodsId);//10个商品，req1 req2=
 		int stock = goods.getStockCount();
 		if(stock <= 0) {
-			model.addAttribute("errmsg", CodeMsg.MIAO_SHA_OVER.getMsg());
+//			model.addAttribute("errmsg", CodeMsg.MIAO_SHA_OVER.getMsg());
 			return Result.error(CodeMsg.MIAO_SHA_OVER);
 		}
 		//判断是否已经秒杀到了
 		MiaoshaOrder order = orderService.getMiaoshaOrderByUserIdGoodsId(user.getId(), goodsId);
 		if(order != null) {
-			model.addAttribute("errmsg", CodeMsg.REPEATE_MIAOSHA.getMsg());
+//			model.addAttribute("errmsg", CodeMsg.REPEATE_MIAOSHA.getMsg());
 			return Result.error(CodeMsg.REPEATE_MIAOSHA);
 		}
 		//减库存 下订单 写入秒杀订单
@@ -127,8 +131,8 @@ public class MiaoshaController implements InitializingBean {
 			System.out.println("orderInfo ============ null null null!");
 			return Result.error(CodeMsg.REPEATE_MIAOSHA);
 		}
-		model.addAttribute("orderInfo", orderInfo);
-		model.addAttribute("goods", goods);
+//		model.addAttribute("orderInfo", orderInfo);
+//		model.addAttribute("goods", goods);
 		return Result.success(orderInfo, 0);
 	}
 
@@ -174,6 +178,93 @@ public class MiaoshaController implements InitializingBean {
 		return Result.success(0);
 	}
 
+	@RequestMapping(value="/{path}/do_miaosha", method=RequestMethod.POST)
+	@ResponseBody
+	public Result<Integer> do_miaosha_path(HttpServletResponse response,
+									 @CookieValue(value=MiaoshaUserService.COOKI_NAME_TOKEN, required = false) String cookieToken,
+									 @RequestParam(value=MiaoshaUserService.COOKI_NAME_TOKEN, required= false) String paramToken,
+									 @RequestParam("goodsId")long goodsId,
+											@PathVariable("path") String path) {
+		System.out.println("=========do_miaosha_mq=====path======");
+		if(StringUtils.isEmpty(cookieToken)&&StringUtils.isEmpty(paramToken)){
+			Result.error(CodeMsg.SESSION_ERROR);
+		}
+
+		String token = StringUtils.isEmpty(paramToken)?cookieToken:paramToken;
+		MiaoshaUser user = userService.getByToken(response, token);
+
+		//验证path
+		boolean check = miaoshaService.checkPath(user, goodsId, path);
+		if(!check){
+			return Result.error(CodeMsg.REQUEST_ILLEGAL);
+		}
+
+		//内存标记，减少redis访问
+		boolean over = localOverMap.get(goodsId);
+		if(over) {
+			return Result.error(CodeMsg.MIAO_SHA_OVER);
+		}
+		//预减库存
+		long stock = redisService.decr(GoodsKey.getMiaoshaGoodsStock, ""+goodsId);//10
+		if(stock < 0) {
+			localOverMap.put(goodsId, true);
+			return Result.error(CodeMsg.MIAO_SHA_OVER);
+		}
+		//判断是否已经秒杀到了
+		MiaoshaOrder order = orderService.getMiaoshaOrderByUserIdGoodsId(user.getId(), goodsId);
+		if(order != null) {
+
+//			model.addAttribute("errmsg", CodeMsg.REPEATE_MIAOSHA.getMsg());
+			return Result.error(CodeMsg.REPEATE_MIAOSHA);
+		}
+		//减库存 下订单 写入秒杀订单
+		//入队
+		MiaoshaMessage mm = new MiaoshaMessage();
+		mm.setUser(user);
+		mm.setGoodsId(goodsId);
+		System.out.println("===========goods into queue!=======");
+		sender.sendMiaoshaMessage(mm);
+		return Result.success(0);
+	}
+
+
+
+	@AccessLimit(seconds=5, maxCount=5, needLogin = true)
+	@RequestMapping(value="/path", method=RequestMethod.GET)
+	@ResponseBody
+	public Result<String> getMiaoshaPath(HttpServletRequest request, HttpServletResponse response,
+//										 @CookieValue(value=MiaoshaUserService.COOKI_NAME_TOKEN, required = false) String cookieToken,
+//										 @RequestParam(value=MiaoshaUserService.COOKI_NAME_TOKEN, required= false) String paramToken,
+										 MiaoshaUser user,
+										 @RequestParam("goodsId")long goodsId){
+//		if(StringUtils.isEmpty(cookieToken)&&StringUtils.isEmpty(paramToken)){
+//			Result.error(CodeMsg.SESSION_ERROR);
+//		}
+//
+//		String token = StringUtils.isEmpty(paramToken)?cookieToken:paramToken;
+//		MiaoshaUser user = userService.getByToken(response, token);
+		System.out.println("=========user=========");
+		System.out.println(user);
+		if(user == null) {
+			return Result.error(CodeMsg.SESSION_ERROR);
+		}
+
+		//查询访问的次数,5秒钟访问5次
+//		String uri = request.getRequestURI();
+//		String key = uri + " " + user.getId();
+//		Integer count = redisService.get(AccessKey.access, key, Integer.class);
+//		if(count == null) {
+//			redisService.set(AccessKey.access, key, 1);
+//		}else if(count < 5){
+//			redisService.incr(AccessKey.access, key);
+//		}else {
+//			return Result.error(CodeMsg.ACCESS_LIMIT_REACHED);
+//		}
+
+		String path  =miaoshaService.createMiaoshaPath(user, goodsId);
+		return Result.success(path);
+	}
+
 	@RequestMapping("/do_miaosha1")
 	public String testMiaosha(Model model, HttpServletResponse response,
 							  @CookieValue(value=MiaoshaUserService.COOKI_NAME_TOKEN, required = false) String cookieToken,
@@ -214,12 +305,15 @@ public class MiaoshaController implements InitializingBean {
 	 * -1：秒杀失败
 	 * 0： 排队中
 	 * */
+	@AccessLimit(seconds=5, maxCount=10)
 	@RequestMapping(value="/result", method=RequestMethod.GET)
 	@ResponseBody
 	public Result<Long> miaoshaResult(HttpServletResponse response,
 									  @CookieValue(value=MiaoshaUserService.COOKI_NAME_TOKEN, required = false) String cookieToken,
 									  @RequestParam(value=MiaoshaUserService.COOKI_NAME_TOKEN, required= false) String paramToken,
 									  @RequestParam("goodsId")long goodsId) {
+
+		//cookieToken和paramToken都是从request中来的
 		System.out.println("cookieToken========" + cookieToken);
 		System.out.println("paramToken=========" + paramToken);
 		System.out.println("==================result===============");

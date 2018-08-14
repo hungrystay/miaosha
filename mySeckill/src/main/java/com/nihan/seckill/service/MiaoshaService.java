@@ -47,6 +47,23 @@ public class MiaoshaService {
 		redisService.set(MiaoshaKey.isGoodsOver, ""+goodsId, true);
 	}
 
+	public String createMiaoshaPath(MiaoshaUser user, long goodsId) {
+		if(user == null || goodsId <=0) {
+			return null;
+		}
+		String str = MD5Util.md5(UUIDUtil.uuid()+"123456");
+		redisService.set(MiaoshaKey.getMiaoshaPath, ""+user.getId() + "_"+ goodsId, str);
+		return str;
+	}
+
+	public boolean checkPath(MiaoshaUser user, long goodsId, String path) {
+		if(user == null || path == null) {
+			return false;
+		}
+		String pathOld = redisService.get(MiaoshaKey.getMiaoshaPath, ""+user.getId() + "_"+ goodsId, String.class);
+		return path.equals(pathOld);
+	}
+
 	public long getMiaoshaResult(Long userId, long goodsId) {
 		MiaoshaOrder order = orderService.getMiaoshaOrderByUserIdGoodsId(userId, goodsId);
 		if(order != null) {//秒杀成功
