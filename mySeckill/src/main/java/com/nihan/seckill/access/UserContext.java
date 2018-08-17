@@ -2,6 +2,9 @@ package com.nihan.seckill.access;
 
 import com.nihan.seckill.domain.MiaoshaUser;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class UserContext {
 	
 	private static ThreadLocal<MiaoshaUser> userHolder = new ThreadLocal<>();
@@ -14,4 +17,6 @@ public class UserContext {
 		return userHolder.get();
 	}
 
+
+	Map map = new HashMap();
 }
